@@ -1,12 +1,13 @@
-import { MantineProvider, TextInput, Textarea, Button, Box, Text } from '@mantine/core'
+import { MantineProvider, TextInput, Textarea, Button, Box, Text, ScrollArea } from '@mantine/core'
 import '@mantine/core/styles.css'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import JSON5 from 'json5'
 import { useAppStore } from './store'
 
 function App() {
   const { url, iframeUrl, iframeMessage, setUrl, setIframeMessage, loadUrl } = useAppStore()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [receivedMessages, setReceivedMessages] = useState<string[]>([])
 
   // Check for URL query parameter on component mount
   useEffect(() => {
@@ -28,6 +29,22 @@ function App() {
       }
     }
   }, [setUrl, loadUrl])
+
+  // Listen for messages from iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only process messages from the iframe
+      if (iframeRef.current && event.source === iframeRef.current.contentWindow) {
+        // Add timestamp and format the message
+        const timestamp = new Date().toLocaleTimeString()
+        const messageText = `[${timestamp}] ${JSON.stringify(event.data, null, 2)}`
+        setReceivedMessages(prev => [...prev, messageText])
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
 
   const postMessageToIframe = (message: string) => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
@@ -102,7 +119,7 @@ function App() {
             flexDirection: 'column'
           }}>
             <Text size="sm" fw={500} mb="xs">
-              Iframe communication
+              Send messages
             </Text>
             <Textarea
               placeholder="Enter message"
@@ -119,6 +136,29 @@ function App() {
             <Button size="sm" onClick={() => postMessageToIframe(iframeMessage)}>
               Post message to iframe
             </Button>
+
+            {/* Received messages area */}
+            <Box style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', marginBottom: '0.5rem' }}>
+              <Text size="sm" fw={500}>
+                Received messages
+              </Text>
+              <Button size="xs" variant="light" onClick={() => setReceivedMessages([])}>
+                Clear
+              </Button>
+            </Box>
+            <ScrollArea style={{ flex: 1, border: '1px solid #e0e0e0', padding: '5px', borderRadius: '4px' }}>
+              <Box>
+                {receivedMessages.length === 0 ? (
+                  <Text size="sm" color="dimmed">No messages received yet.</Text>
+                ) : (
+                  receivedMessages.map((msg, index) => (
+                    <Text key={index} size="sm" mb="xs" style={{ wordWrap: 'break-word' }}>
+                      {msg}
+                    </Text>
+                  ))
+                )}
+              </Box>
+            </ScrollArea>
           </Box>
         </Box>
       </Box>
