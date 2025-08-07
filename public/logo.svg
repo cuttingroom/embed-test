@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" x="0px" y="0px"
+     viewBox="0 0 429.1 417" style="enable-background:new 0 0 429.1 417;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#FAAA1A;}
+</style>
+    <path class="st0" d="M375.4,158.7H164.8V30.8h210.6c9.3,0,16.8,7.5,16.8,16.8V142C392.2,151.2,384.7,158.7,375.4,158.7z"/>
+    <path class="st0" d="M275.6,369.4v-28.8c0-9.3-7.5-16.8-16.8-16.8h-94v62.3h94C268.1,386.1,275.6,378.6,275.6,369.4z"/>
+    <path class="st0" d="M164.8,177.3H53.7c-9.3,0-16.8,7.5-16.8,16.8v94.4c0,9.3,7.5,16.8,16.8,16.8h111.2V177.3z"/>
+</svg>
