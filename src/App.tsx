@@ -3,10 +3,12 @@ import '@mantine/core/styles.css'
 import { useRef, useEffect, useState } from 'react'
 import JSON5 from 'json5'
 import { useAppStore } from './store'
+import { messageTemplates } from './message-templates'
 
 function App() {
   const { url, iframeUrl, iframeMessage, setUrl, setIframeMessage, loadUrl } = useAppStore()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [receivedMessages, setReceivedMessages] = useState<string[]>([])
 
   // Check for URL query parameter on component mount
@@ -58,6 +60,27 @@ function App() {
         iframeRef.current.contentWindow.postMessage(message, '*')
       }
     }
+  }
+
+  const loadTemplate = (template: any) => {
+    const templateJson = JSON.stringify(template, null, 2)
+
+    setIframeMessage(templateJson)
+
+    // Select the placeholder text after a short delay to ensure textarea is updated
+    setTimeout(() => {
+      if (textareaRef.current) {
+        const text = textareaRef.current.value
+        const placeholderRegex = /<[A-Z\s]+>/
+        const match = text.match(placeholderRegex)
+        if (match) {
+          const startIndex = match.index!
+          const endIndex = startIndex + match[0].length
+          textareaRef.current.focus()
+          textareaRef.current.setSelectionRange(startIndex, endIndex)
+        }
+      }
+    }, 10)
   }
 
   return (
@@ -121,7 +144,19 @@ function App() {
             <Text size="sm" fw={500} mb="xs">
               Send messages
             </Text>
+
+            {/* Template buttons */}
+            <Box style={{ display: 'flex', gap: '5px', marginBottom: '10px', justifyContent: 'center' }}>
+              <Button size="xs" variant="outline" onClick={() => loadTemplate(messageTemplates.openSourceMedia)}>
+                Open source media
+              </Button>
+              <Button size="xs" variant="outline" onClick={() => loadTemplate(messageTemplates.openProject)}>
+                Open project
+              </Button>
+            </Box>
+
             <Textarea
+              ref={textareaRef}
               placeholder="Enter message"
               value={iframeMessage}
               onChange={(e) => setIframeMessage(e.currentTarget.value)}
