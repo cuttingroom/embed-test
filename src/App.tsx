@@ -1,12 +1,33 @@
 import { MantineProvider, TextInput, Textarea, Button, Box, Text } from '@mantine/core'
 import '@mantine/core/styles.css'
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import JSON5 from 'json5'
 import { useAppStore } from './store'
 
 function App() {
   const { url, iframeUrl, iframeMessage, setUrl, setIframeMessage, loadUrl } = useAppStore()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  // Check for URL query parameter on component mount
+  useEffect(() => {
+    // Simple query parameter parsing that handles URLs with # and ?
+    const search = window.location.search + window.location.hash;
+    if (search.startsWith('?')) {
+      const queryString = search.substring(1) // Remove the leading '?'
+
+      // Find embedUrl parameter and treat everything after '=' as the URL value
+      const embedUrlPrefix = 'embedUrl='
+      const embedUrlIndex = queryString.indexOf(embedUrlPrefix)
+
+      if (embedUrlIndex !== -1) {
+        const urlValue = queryString.substring(embedUrlIndex + embedUrlPrefix.length)
+        const decodedUrl = decodeURIComponent(urlValue)
+        setUrl(decodedUrl)
+        // Automatically load the URL into the iframe
+        loadUrl()
+      }
+    }
+  }, [setUrl, loadUrl])
 
   const postMessageToIframe = (message: string) => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
