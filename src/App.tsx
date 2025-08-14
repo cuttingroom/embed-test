@@ -10,34 +10,39 @@ function App() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [receivedMessages, setReceivedMessages] = useState<string[]>([])
+  const [embeddedMode, setEmbeddedMode] = useState(false)
 
-  // Check for URL query parameter on component mount
+  // Check for URL query parameters on component mount
   useEffect(() => {
     // Simple query parameter parsing that handles URLs with # and ?
-    const search = window.location.search + window.location.hash;
+    const search = window.location.search + window.location.hash
     if (search.startsWith('?')) {
-      const queryString = search.substring(1) // Remove the leading '?'
+      const params = new URLSearchParams(search.substring(1))
 
-      // Find embedUrl parameter and treat everything after '=' as the URL value
-      const embedUrlPrefix = 'embedUrl='
-      const embedUrlIndex = queryString.indexOf(embedUrlPrefix)
-
-      if (embedUrlIndex !== -1) {
-        const urlValue = queryString.substring(embedUrlIndex + embedUrlPrefix.length)
-        const decodedUrl = decodeURIComponent(urlValue)
+      const embedUrlParam = params.get('embedUrl')
+      if (embedUrlParam) {
+        const decodedUrl = decodeURIComponent(embedUrlParam)
         setUrl(decodedUrl)
         // Automatically load the URL into the iframe
         loadUrl()
       }
-    }
-  }, [setUrl, loadUrl])
 
-  // Listen for messages from iframe
+      if (params.get('embedded') === 'true') {
+        setEmbeddedMode(true)
+      }
+    }
+  }, [setUrl, loadUrl, setEmbeddedMode])
+
+  // Listen for messages from iframe or parent depending on mode
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Only process messages from the iframe
-      if (iframeRef.current && event.source === iframeRef.current.contentWindow) {
-        // Add timestamp and format the message
+      if (embeddedMode) {
+        if (event.source === window.parent && event.source !== window) {
+          const timestamp = new Date().toLocaleTimeString()
+          const messageText = `[${timestamp}] ${JSON.stringify(event.data, null, 2)}`
+          setReceivedMessages(prev => [...prev, messageText])
+        }
+      } else if (iframeRef.current && event.source === iframeRef.current.contentWindow) {
         const timestamp = new Date().toLocaleTimeString()
         const messageText = `[${timestamp}] ${JSON.stringify(event.data, null, 2)}`
         setReceivedMessages(prev => [...prev, messageText])
@@ -46,23 +51,29 @@ function App() {
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [])
+  }, [embeddedMode])
 
-  const postMessageToIframe = (message: string) => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
+  const postMessageToTarget = (message: string) => {
+    const sendMessage = (targetWindow: Window) => {
       try {
-        // Try to parse as JSON5 first, then send the parsed object
         const parsedMessage = JSON5.parse(message)
-        iframeRef.current.contentWindow.postMessage(parsedMessage, '*')
+        targetWindow.postMessage(parsedMessage, '*')
       } catch (error) {
-        // If parsing fails, send as plain string
         console.warn('Failed to parse message as JSON5, sending as string:', error)
-        iframeRef.current.contentWindow.postMessage(message, '*')
+        targetWindow.postMessage(message, '*')
       }
+    }
+
+    if (embeddedMode) {
+      if (window.parent) {
+        sendMessage(window.parent)
+      }
+    } else if (iframeRef.current && iframeRef.current.contentWindow) {
+      sendMessage(iframeRef.current.contentWindow)
     }
   }
 
-  const loadTemplate = (template: any) => {
+  const loadTemplate = (template: Record<string, unknown>) => {
     const templateJson = JSON.stringify(template, null, 2)
 
     setIframeMessage(templateJson)
@@ -88,54 +99,58 @@ function App() {
       <Box style={{
         height: '100vh',
         display: 'grid',
-        gridTemplateRows: 'auto 1fr',
+        gridTemplateRows: embeddedMode ? '1fr' : 'auto 1fr',
         gridTemplateColumns: '1fr',
         overflow: 'hidden'
       }}>
         {/* Top Panel */}
-        <Box p="md" style={{ borderBottom: '1px solid #e0e0e0' }}>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <TextInput
-              placeholder="Enter URL for iframe"
-              value={url}
-              onChange={(e) => setUrl(e.currentTarget.value)}
-              style={{ flex: 1 }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  loadUrl()
-                }
-              }}
-            />
-            <Button onClick={loadUrl}>Load</Button>
-          </div>
-        </Box>
+        {!embeddedMode && (
+          <Box p="md" style={{ borderBottom: '1px solid #e0e0e0' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <TextInput
+                placeholder="Enter URL for iframe"
+                value={url}
+                onChange={(e) => setUrl(e.currentTarget.value)}
+                style={{ flex: 1 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    loadUrl()
+                  }
+                }}
+              />
+              <Button onClick={loadUrl}>Load</Button>
+            </div>
+          </Box>
+        )}
 
         {/* Main Content Area - Split 80%/20% */}
         <Box style={{
           display: 'grid',
-          gridTemplateColumns: '80% 20%',
+          gridTemplateColumns: embeddedMode ? '1fr' : '80% 20%',
           height: '100%',
           overflow: 'hidden'
         }}>
           {/* Main Panel - 80% width with iframe */}
-          <Box p="md" style={{ height: '100%', overflow: 'hidden' }}>
-            <iframe
-              ref={iframeRef}
-              src={iframeUrl}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                backgroundColor: 'black'
-              }}
-              title="Content Frame"
-              allow="autoplay; fullscreen; microphone; camera; midi; encrypted-media; picture-in-picture; display-capture; clipboard-read; clipboard-write"
-            />
-          </Box>
+          {!embeddedMode && (
+            <Box p="md" style={{ height: '100%', overflow: 'hidden' }}>
+              <iframe
+                ref={iframeRef}
+                src={iframeUrl}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  backgroundColor: 'black'
+                }}
+                title="Content Frame"
+                allow="autoplay; fullscreen; microphone; camera; midi; encrypted-media; picture-in-picture; display-capture; clipboard-read; clipboard-write"
+              />
+            </Box>
+          )}
 
           {/* Right Panel - 20% width with textarea */}
           <Box p="md" style={{
-            borderLeft: '1px solid #e0e0e0',
+            borderLeft: embeddedMode ? undefined : '1px solid #e0e0e0',
             height: '100%',
             overflow: 'hidden',
             display: 'flex',
@@ -168,8 +183,8 @@ function App() {
                 marginBottom: '10px'
               }}
             />
-            <Button size="sm" onClick={() => postMessageToIframe(iframeMessage)}>
-              Post message to iframe
+            <Button size="sm" onClick={() => postMessageToTarget(iframeMessage)}>
+              {embeddedMode ? 'Post message to parent' : 'Post message to iframe'}
             </Button>
 
             {/* Received messages area */}
