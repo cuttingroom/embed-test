@@ -274,7 +274,7 @@ function App() {
                     <Text size="sm" c="dimmed">No messages received yet.</Text>
                 ) : (
                     <Box component="ul" m={0} p={0} style={{ listStyle: 'none' }}>
-                      {receivedMessages.map((msg, index) => (
+                      {[...receivedMessages].reverse().map((msg, index) => (
                           <Box component="li" key={index} mb="xs">
                             <Text size="xs" c="dimmed">{msg.timestamp}</Text>
                             <Code block>{JSON.stringify(msg.data, null, 2)}</Code>
