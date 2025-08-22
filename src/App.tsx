@@ -251,9 +251,11 @@ function App() {
                   rows={8}
                   autosize={false}
                   resize="none"
-                  style={{
-                    fontFamily: 'monospace',
-                    marginBottom: '10px'
+                  styles={{
+                    input: {
+                      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                      fontSize: 'calc(0.75rem * var(--mantine-scale))'
+                    }
                   }}
               />
               <Button size="sm" onClick={() => postMessageToTarget(iframeMessage)}>
