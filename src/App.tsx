@@ -89,23 +89,72 @@ function App() {
     setIsDragging(true)
   }
 
-  const postMessageToTarget = (message: string) => {
-    const sendMessage = (targetWindow: Window) => {
-      try {
-        const parsedMessage = JSON5.parse(message)
-        targetWindow.postMessage(parsedMessage, '*')
-      } catch (error) {
-        console.warn('Failed to parse message as JSON5, sending as string:', error)
-        targetWindow.postMessage(message, '*')
+  const splitJsonObjects = (text: string): string[] => {
+    const objects: string[] = []
+    let depth = 0
+    let start = -1
+    let inString = false
+    let escape = false
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i]
+
+      if (escape) {
+        escape = false
+        continue
+      }
+
+      if (ch === '\\' && inString) {
+        escape = true
+        continue
+      }
+
+      if (ch === '"') {
+        inString = !inString
+        continue
+      }
+
+      if (inString) continue
+
+      if (ch === '{') {
+        if (depth === 0) start = i
+        depth++
+      } else if (ch === '}') {
+        depth--
+        if (depth === 0 && start !== -1) {
+          objects.push(text.substring(start, i + 1))
+          start = -1
+        }
       }
     }
 
-    if (embeddedMode) {
-      if (window.parent) {
-        sendMessage(window.parent)
+    return objects
+  }
+
+  const postMessageToTarget = (message: string) => {
+    const sendMessage = (targetWindow: Window, msg: string) => {
+      try {
+        const parsedMessage = JSON5.parse(msg)
+        targetWindow.postMessage(parsedMessage, '*')
+      } catch (error) {
+        console.warn('Failed to parse message as JSON5, sending as string:', error)
+        targetWindow.postMessage(msg, '*')
       }
-    } else if (iframeRef.current && iframeRef.current.contentWindow) {
-      sendMessage(iframeRef.current.contentWindow)
+    }
+
+    const targetWindow = embeddedMode
+        ? (window.parent !== window ? window.parent : null)
+        : iframeRef.current?.contentWindow ?? null
+
+    if (!targetWindow) return
+
+    const objects = splitJsonObjects(message)
+    if (objects.length > 1) {
+      for (const obj of objects) {
+        sendMessage(targetWindow, obj)
+      }
+    } else {
+      sendMessage(targetWindow, message)
     }
   }
 
