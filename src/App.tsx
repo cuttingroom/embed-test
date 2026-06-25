@@ -247,7 +247,7 @@ function App() {
                         backgroundColor: 'black',
                       }}
                       title="Content Frame"
-                      allow="autoplay; fullscreen; microphone; camera; midi; encrypted-media; picture-in-picture; display-capture; clipboard-read; clipboard-write"
+                      allow="autoplay; fullscreen; microphone; camera; midi; encrypted-media; picture-in-picture; display-capture; clipboard-read; clipboard-write; keyboard-map"
                   />
                 </Box>
             )}
