@@ -11,7 +11,14 @@ function App() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [receivedMessages, setReceivedMessages] = useState<{ timestamp: string; data: unknown }[]>([])
-  const [embeddedMode, setEmbeddedMode] = useState(false)
+  const [embeddedMode] = useState(() => {
+    const search = window.location.search + window.location.hash
+    if (search.startsWith('?')) {
+      const params = new URLSearchParams(search.substring(1))
+      return params.get('embedded') === 'true'
+    }
+    return false
+  })
   const [panelRatio, setPanelRatio] = useState(80)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -28,11 +35,8 @@ function App() {
         loadUrl()
       }
 
-      if (params.get('embedded') === 'true') {
-        setEmbeddedMode(true)
-      }
     }
-  }, [setUrl, loadUrl, setEmbeddedMode])
+  }, [setUrl, loadUrl])
 
   // Listen for messages from iframe or parent depending on mode
   useEffect(() => {
